@@ -43,6 +43,13 @@ def main():
         
     btn.set_toggle_action(toggle_manual_buzzer)
 
+    # --- Proximity Alarm Variables ---
+    MAX_BEEP_DIST = 800.0  # (mm) Distances greater than this will NOT beep
+    MIN_BEEP_DIST = 50.0   # (mm) Distance where the beep is at its absolute fastest
+    
+    last_beep_time = time.time()
+    beep_toggle_state = False
+
     print("\nSystem Live! Press Ctrl+C to stop.")
     print("-" * 115) 
 
@@ -73,16 +80,47 @@ def main():
             actual_cam, actual_tof = gimbal.smooth_update(
                 raw_cam_angle, 
                 raw_tof_angle, 
-                deadband=5.0,    # Must move 5 degrees to trigger update
-                smoothing=0.15   # Moves 15% of the distance every loop
+                deadband=5.0,    
+                smoothing=0.08   # Lowered to 0.08 because the loop runs faster now
             )
 
-            # Buzzer Logic
-            if wet or btn_active:
+            # ==========================================
+            # ALARM LOGIC (Master Button -> Water -> ToF)
+            # ==========================================
+            current_time = time.time()
+
+            if btn_active:
                 buzzer.turn_on()
-                status = "!! WET !!" if wet else " BTN ON  "
+                status = " OVERRIDE"
+                
+            elif wet:
+                buzzer.turn_on()
+                status = "!! WET !!"
+                
+            elif dist <= MAX_BEEP_DIST:
+                # 1. Figure out how close we are as a fraction (0.0 to 1.0)
+                fraction = (dist - MIN_BEEP_DIST) / (MAX_BEEP_DIST - MIN_BEEP_DIST)
+                fraction = max(0.0, min(1.0, fraction)) # Clamp it between 0 and 1
+                
+                # 2. Map that fraction to a beep delay speed
+                # Closer distance = smaller fraction = smaller delay = faster beep
+                current_beep_delay = 0.05 + (0.55 * fraction)
+
+                # 3. Toggle the buzzer state if enough time has passed
+                if (current_time - last_beep_time) >= current_beep_delay:
+                    last_beep_time = current_time
+                    beep_toggle_state = not beep_toggle_state
+                    
+                    if beep_toggle_state:
+                        buzzer.turn_on()
+                    else:
+                        buzzer.turn_off()
+                        
+                status = " BEEPING "
+                
             else:
                 buzzer.turn_off()
+                beep_toggle_state = False # Reset so the next beep starts ON immediately
                 status = "   DRY   "
 
             # Print Data Stream
@@ -91,13 +129,12 @@ def main():
             
             print(f"{dist_str}  |  {gmb_str}  |  Status: {status}")
             
-            # Fast update rate (10 times a second) for smooth motor gliding
-            time.sleep(0.1)
+            # Loop now runs 20 times a second to allow for extremely fast beeping
+            time.sleep(0.05)
             
     except KeyboardInterrupt:
         print("\nShutting down safely...")
         buzzer.turn_off() 
-        # Smoothly reset to center before quitting
         print("Re-centering servos...")
         for _ in range(20):
             gimbal.smooth_update(0, 0, deadband=0, smoothing=0.2)
