@@ -11,9 +11,11 @@ sudo systemctl enable ssh
 sudo systemctl start ssh
 
 ##Enter Project:
-cd ~/Documents/ClearPath
+cd ~/Documents/Hardware_Hackathon/
 
 ##Raspberry Pi Stream Initialization:
 Start Stream: ./stream.sh
 
-##CV start:
+##tts start:
+cd ~/Documents/Hardware_Hackathon/pi_node/
+python3 tts_reciever.py
