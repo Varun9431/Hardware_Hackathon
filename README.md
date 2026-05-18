@@ -2,20 +2,20 @@
 RIEEE x RUHart Hardware Hackathon Spring 2026
 
 
-##Start Wifi:
+#Start Wifi:
 nmcli device wifi list
 sudo nmcli device wifi connect "YOUR_SSID" password "YOUR_PASSWORD"
 
-##Start ssh:
+#Start ssh:
 sudo systemctl enable ssh
 sudo systemctl start ssh
 
-##Enter Project:
+#Enter Project:
 cd ~/Documents/Hardware_Hackathon/
 
-##Raspberry Pi Stream Initialization:
+#Raspberry Pi Stream Initialization:
 Start Stream: ./stream.sh
 
-##tts start:
+#tts start:
 cd ~/Documents/Hardware_Hackathon/pi_node/
 python3 tts_reciever.py
